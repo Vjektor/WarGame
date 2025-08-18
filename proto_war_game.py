@@ -8,6 +8,20 @@ from random import shuffle
 ##########################################
 # Card class definition
 ##########################################
+class Functions:
+    def __init__ (self):
+        pass
+
+    def ask_yes_no(question, default = True):
+        while True:
+            resp = input(question + " [Y/N]: ").strip().lower()
+            if not resp:
+                print("No option was chosen: sticking to default settings.")
+                return default
+            if resp[0] in ("y", "n"):
+                return resp[0] == "y"
+            print("Please input only Yes (Y), or No (N).")
+
 class Card:
     suits = {1: "Spades",
              2: "Hearts",
@@ -60,45 +74,37 @@ class Deck():
         for i in range(2, 15):
             for j in range(1, 5):
                 self.cards.append(Card(i, j))
-        shuffle(self.cards)
 
-    def add_joker(self, add = True):
-        
-        yes_no_map = {
-            'y': True,
-            'n': False
-                      }
-        
-        prompt1 = "Do you want to play with jokers included (Yes/No)?"
-        prompt2 = "Do you wish to read the functionality of the Joker card in this game (Yes/No)?"
+        show_rules, use_jokers = self.joker_flags()
 
-        prompts = [prompt1, prompt2]
+        if show_rules:
+            print("JOKER EXPLANATION PLACEHOLDER")
 
-        for i in prompts:
-            try:
-                prompt = str(input(i))
-                prompt.lower()
-                if prompt[0] != "y" or prompt[0] != 'n':
-                    raise ValueError
-                
-            except ValueError:
-                print("Please input only 'Yes' or 'Y', or 'No' or 'N'.")
-
-            x = 0
-            prompts[x] = prompt[yes_no_map]
-            x += 1
-        prompt = 
-
-        if add:
-            joker = Card(15, 5)
-            self.cards.extend([joker, joker])
+        if use_jokers:
+            self.cards.extend([Card(15, 5), Card(15, 5)])
             print("Jokers were successfully added!")
         else:
-            print("No Jokers wered added!")
+            print("No Jokers were added!")
+
+        shuffle(self.cards)
+
+    def joker_flags(self):
+        print("Do you want to play with jokers?\n"
+              "\033[3m(Default selection is:\033[0m \033[1;3mno rules\033[0m \033[3mshown, and \033[1;3mjokers included\033[0m\033[3m)\033[0m")
+        show_rules = Functions.ask_yes_no("Do you want to see the rules of the jokers?", default =False)
+        use_jokers = Functions.ask_yes_no("Do you want to play with jokers included?", default=True)
+        return show_rules, use_jokers
+    
+    # if add:
+    #     joker = Card(15, 5)
+    #     self.cards.extend([joker, joker])
+    #     print("Jokers were successfully added!")
+    # else:
+    #     print("No Jokers wered added!")
             
 
     def deal(self):
-        return self.cards[:26], self.cards[26:]
+        return self.cards[:27], self.cards[27:]
     
 ##########################################
 # Player class definition
@@ -115,6 +121,7 @@ class Player():
         self.to_hand = min(self.slots, len(self.stack))
         for _ in range(self.to_hand):
             self.hand.append(self.stack.pop(0))
+        print("REFILL WORKED")
     
     # def collect_spoils(self, spoils):
     #     to_stack = len(spoils) - self.to_hand
@@ -147,13 +154,13 @@ class Player():
     #     8: "Eight", 9: "Nine", 10: "Ten"
     #     }
     
-    # def spoils_refill_msg(self, to_hand, to_stack):
-    #     num_to_text = self.num_text_dict[len(to_stack)]
-    #     if len(to_stack) == 1:
-    #         card_text = "One card was"
-    #     elif len(to_stack) in range(11) and not 0 and not 1:
-    #         card_text = f"{num_to_text} cards were"
-    #     print(f"The following cards were added to your hand: {to_hand}\n{card_text} added to the bottom of your stack!")
+    def spoils_refill_msg(self, to_hand, to_stack):
+        num_to_text = self.num_text_dict[len(to_stack)]
+        if len(to_stack) == 1:
+            card_text = "One card was"
+        elif len(to_stack) in range(11) and not 0 and not 1:
+            card_text = f"{num_to_text} cards were"
+        print(f"The following cards were added to your hand: {to_hand}\n{card_text} added to the bottom of your stack!")
 
 ##########################################
 # Game class definition
@@ -178,7 +185,8 @@ class Game():
 ##########################################
     def play_game(self):
         while self.p1.stack and self.p2.stack:
-            # print(len(self.p1.stack), len(self.p2.stack))
+            print(len(self.p1.stack), self.p1.stack)
+            print(len(self.p2.stack), self.p2.stack)
 
             if not self.simulate:
                 response = input("\n\033[3mPress\033[0m \033[1;3mq\033[0m \033[3mto quit,\033[0m \033[1;3ms\033[0m \033[3mto simulate, or press\033[0m \033[1;3many other key\033[0m \033[3mto play:\033[0m")
@@ -191,6 +199,10 @@ class Game():
             print("--------------------\nA new battle commences, draw your weapons!\n")
             
             self.one_round()
+
+            for p in (self.p1, self.p2):
+                p.refill_hand()
+                # p.refill_msg()
 
 ##########################################
 # Round definition
@@ -205,21 +217,25 @@ class Game():
 
         p1c, p2c = self.card_choice(p1n, p2n)
         
-        if p1c > p2c:
-            self.p1.stack.extend([p1c, p2c])
-            self.win_msg(p1n)
-        elif p2c > p1c:
-            self.p2.stack.extend([p1c, p2c])
-            self.win_msg(p2n)
-        elif p1c == p2c:
-            self.war_resolve(p1n, p1c, p2n, p2c)
-
-        self.p1.refill_hand()
-        self.p2.refill_hand()
+        for p in (self.p1, self.p2):
+            if p1c > p2c:
+                self.p1.stack.extend([p1c, p2c])
+                self.win_msg(p1n)
+                p.refill_hand()
+            elif p2c > p1c:
+                self.p2.stack.extend([p1c, p2c])
+                self.win_msg(p2n)
+                p.refill_hand()
+            elif p1c == p2c:
+                self.war_resolve(p1n, p1c, p2n, p2c)
+                for p in (self.p1, self.p2):
+                    self.tie_refill_msg(p, to_hand, stack)
+            
 
         win, winner = self.determine_winner()
+
         if win == None:
-            print("A terrible mistake took place as no winner can be determined, rendering this war pointless... Sorry, not sorry :)")
+            print("The messenger was killed: no winner can be determined, rendering this war pointless... Sorry, not sorry :)")
             return
         elif win == False:
             return
@@ -276,6 +292,18 @@ class Game():
     
     def tie_win_msg(self, winner_name):
         print(f"\033[1m{winner_name}\033[0m has won the war and takes all the spoils back to their camp!\n====================\n--------------------\n")
+
+    def tie_refill_msg(self, name, to_hand, to_stack):
+        if len(to_hand) == 0:
+            print(f"\033[1m{name}\033[0m, unfortunately, you did not receive any cards from this war...")
+        elif len(to_hand) == 1:
+            hand_text = f"\033[1m{name}\033[0m, the following, single, card was added to your hand: {to_hand}.\n"
+            stack_text = f"No cards were added to your stack..."
+            print(hand_text, stack_text)
+        elif len(to_hand) > 1:
+            hand_text = f"\033[1m{name}\033[0m, the following {len(to_hand)} cards were added to your hand: {to_hand}.\n"
+            stack_text = f"The following {len(to_stack)} cards were added to the bottom of your stack:\n{to_stack}"
+            print(hand_text, stack_text)
     
     def tie_tie_msg(self, p1n, p2n, comp_card):
         comp_name = Card.values[comp_card]
@@ -286,7 +314,7 @@ class Game():
 # War scenario methods
 ##########################################
     def war_resolve(self, p1n, p1c, p2n, p2c):
-        print(f"Both players had a {p1c.value}, it's a tie...\n\033[1mWar has broken out!\033[0m\n----------------")
+        print(f"Both players had a {p1c.value}, it's a tie...\n\n\033[1mWar has broken out!\033[0m\n----------------")
         spoils = [p1c, p2c]
 
         # DEBUGGINGG GNGNAGEIEAOHFJAJSPDASDLA J
@@ -320,23 +348,45 @@ class Game():
             print(f"{self.p2.name}'s hand: {len(self.p2.hand)}")
             
             #### JOKER LOGIC
-            if self.joker in (comp_card1, comp_card2):
+            if Card.values == 15 in (comp_card1, comp_card2):
                 pass
 
-            if comp_card1 > comp_card2:
-                self.p1.stack.extend(spoils + war_cards)
-                print(spoils + war_cards)
-                self.tie_win_msg(p1n) 
-                tie_repeat = False
-            elif comp_card2 > comp_card1:
-                self.p2.stack.extend(spoils + war_cards)
-                print(spoils + war_cards)
-                self.tie_win_msg(p2n)
-                tie_repeat = False
-            elif comp_card1 == comp_card2:
-                spoils.extend([comp_card1, comp_card2])
-                self.tie_tie_msg(p1n, p2n, comp_card1.value)
-                tie_repeat = True   
+            extend = (spoils + war_cards)
+            
+            for p in (self.p1, self.p2):
+                if comp_card1 > comp_card2:
+                    self.p1.stack.extend(extend)
+                    print(extend)
+                    self.tie_win_msg(self.p1.name)
+                    num_to_hand = len(extend) - len(self.p1.hand)
+                    num_to_stack = len(extend) - num_to_hand
+                    to_stack = extend[num_to_hand:]
+                    print(len(extend), extend, len(to_stack), to_stack)
+                    Game.tie_refill_msg(self, p.name, extend, to_stack) 
+
+                    tie_repeat = False
+
+                elif comp_card2 > comp_card1:
+                    self.p2.stack.extend(extend)
+                    print(extend)
+                    self.tie_win_msg(self.p2.name)
+                    to_hand = len(extend) - len(self.p1.hand)
+                    to_stack = len(extend) - to_hand
+                    Game.tie_refill_msg(self, p.name, extend, to_stack) 
+
+                    tie_repeat = False
+
+                elif comp_card1 == comp_card2:
+                    spoils.extend([comp_card1, comp_card2])
+                    self.tie_tie_msg(p1n, p2n, comp_card1.value)
+                    to_hand = len(extend) - len(self.p1.hand)
+                    to_stack = len(extend) - len(to_hand)
+                    Game.tie_refill_msg(self, p.name, extend, to_stack) 
+
+                    tie_repeat = True
+
+                for p in (self.p1, self.p2):
+                    p.refill_hand()   
 
             # DEBUGGINGG GNGNAGEIEAOHFJAJSPDASDLA J
             print("burn:", burn_cards, "war:", war_cards)
@@ -365,6 +415,11 @@ class Game():
                             idx = int(input(prompt))
                             if idx not in range(1, len(p.hand) + 1):
                                 raise IndexError
+                            burn_card = p.hand.pop(idx-1)
+                            print("burn card (single):", burn_card)
+                            burn_cards.append(burn_card)
+                            print("burn cards:", burn_cards)
+                            
                         except ValueError:
                             print("Please enter a number.")
                             continue
@@ -374,11 +429,11 @@ class Game():
                         break
 
                     elif self.simulate:
-                        idx = random.choice(range(1, len(p.hand) + 1))
+                        idx = random.choice(range(1, len(p.hand)))
                         break
-
-                    burn_card = p.hand.pop(idx - 1)
-                    burn_cards.append(burn_card)
+                    
+                # burn_cards.append(p.hand.pop(idx-1))
+                # print("ADDED TO BURN CARDS", p.hand.pop(idx-1))
 
         for p in (self.p1, self.p2):
             while True:
@@ -412,16 +467,18 @@ class Game():
         game_end = False
 
         for p, count in players:
-            if count >= 2:
+            if count == 0:
+                print(f"\033[1m{p.name}\033[0m has run out of cards to use in the war...\n--------------------")
                 burn_flags[p] = True
+                game_end = True
 
             elif count == 1:
                 print(f"\033[1m{p.name}\033[0m is on their last card. They will play this round without a burner card. Better make it count!")
                 burn_flags[p] = False
-            elif count == 0:
-                print(f"\033[1m{p.name}\033[0m has run out of cards to use in the war...\n--------------------")
+
+            elif count >= 2:
                 burn_flags[p] = True
-                game_end = True
+
             else:
                 raise ValueError(f"Invalid card count ({count}) for player \033[1m{p.name}\033[0m. Expected >= 0.")
 
