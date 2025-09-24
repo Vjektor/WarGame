@@ -25,7 +25,7 @@ class Functions:
     def list_msg(cards):
         list = [f"[{i}]: {card}"
                 for i, card in enumerate(cards, start = 1)]
-        list_str = ",\n".join(list)
+        list_str = "\n,".join(list)
         return list_str
 
 class Card:
@@ -203,7 +203,16 @@ class Game():
         p1c, p2c = self.card_choice(p1n, p2n)
         
         for p in (self.p1, self.p2):
-            if p1c > p2c:
+            if p1c.value == 15:
+                print(f"{p.name} drew a \033[1mJoker\033[0m!\nLet's see {p2n}'s hand")
+                print(self.p2.hand)
+                prompt = f"Upon seeing {p2n}'s hand, do you want to exchange one of your cards or go straight to playing your war card?"
+                exchange = Functions.ask_yes_no(prompt)
+                if exchange == True:
+                   pass
+                elif exchange == False: 
+                    pass
+            elif p1c > p2c:
                 self.p1.stack.extend([p1c, p2c])
                 self.win_msg(p1n)
                 p.refill_hand()
@@ -232,7 +241,7 @@ class Game():
             while True:
                 if not self.simulate:
                     p.hand_msg()
-                    print(self.p1.hand, self.p2.hand)
+
                     prompt = f"\033[1m{p.name}\033[0m, choose a card (1-{len(p.hand)}): "
 
                     try:
@@ -521,9 +530,9 @@ class Game():
             print(f"{p.name}'s hand before redeal:{p.hand}")
 
             to_stack_len = min(len(p.hand), 5)
-            for _ in range((to_stack_len), 5):
-                to_stack = p.hand.pop()
-                p.stack.append(to_stack[0])
+            to_stack = p.hand[slice(to_stack_len)]
+            p.stack.extend(to_stack)
+            p.hand.clear()
 
             print(f"{p.name}'s hand afterredeal:{p.hand}")
 
