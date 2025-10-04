@@ -23,9 +23,9 @@ class Functions:
             print("Please input Yes (Y), or No (N) only.")
 
     def list_msg(cards):
-        list = [f"[{i}]: {card}"
+        list = [f"\n[{i}]: {card}"
                 for i, card in enumerate(cards, start = 1)]
-        list_str = "\n,".join(list)
+        list_str = ",".join(list)
         return list_str
 
 class Card:
@@ -69,6 +69,11 @@ class Card:
             card_name = self.values[self.value] + " of " \
             + self.suits[self.suit]
         return card_name
+
+class Joker(Card):
+    def __init__(self):
+        self.value == 15
+        self.suit == 5
 
 ##########################################
 # Deck class definition
@@ -205,7 +210,9 @@ class Game():
         for p in (self.p1, self.p2):
             if p1c.value == 15:
                 print(f"{p.name} drew a \033[1mJoker\033[0m!\nLet's see {p2n}'s hand")
-                print(self.p2.hand)
+                print(f"{p2n}'s hand: {Functions.list_msg(self.p2.hand)}")
+
+                
                 prompt = f"Upon seeing {p2n}'s hand, do you want to exchange one of your cards or go straight to playing your war card?"
                 exchange = Functions.ask_yes_no(prompt)
                 if exchange == True:
