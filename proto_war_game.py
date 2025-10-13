@@ -72,8 +72,8 @@ class Card:
 
 class Joker(Card):
     def __init__(self):
-        self.value == 15
-        self.suit == 5
+        self.value = 15
+        self.suit = 5
 
 ##########################################
 # Deck class definition
@@ -123,13 +123,13 @@ class Player():
             self.refill_hand()
 
     def refill_hand(self):
-        self.slots = 5 - len(self.hand)
-        self.to_hand = min(self.slots, len(self.stack))
-        for _ in range(self.to_hand):
-            self.hand.append(self.stack.pop(0))
-    
+            slots = max(0, 5 - len(self.hand))
+            to_hand = min(slots, len(self.stack))
+            for _ in range(to_hand):
+                self.hand.append(self.stack.pop(0))
+        
     # Player message print statements
-    def hand_msg(self, first = False, war = False, burn = True):
+    def hand_msg(self, first = False, war = False, burn = True, joker_round = False):
         numbered_hand = [f"[{i}]: {card}"
                        for i, card in enumerate(self.hand, start = 1)]
         hand_str = ",\n".join(numbered_hand)
@@ -142,6 +142,16 @@ class Player():
             print(f"\n\033[1m{self.name}\033[0m, your hand to select a burn card from is:\n{hand_str}")
         elif first == False and war == True and burn == False:
             print(f"\n\033[1m{self.name}\033[0m, your hand to select a playing card from is:\n{hand_str}")
+
+    def joker_hand_msg(self, joker_player = True, other_player = False):
+        numbered_hand = [f"[{i}]: {card}"
+                       for i, card in enumerate(self.hand, start = 1)]
+        hand_str = ",\n".join(numbered_hand)
+        
+        if joker_player == True:
+            print(f"\n\033[1m{joker_player.name}\033[0m, here's your hand again:\n{hand_str}")
+        elif other_player:
+            print(f"\n\033[1m{joker_player.name}\033[0m, here's what you can select from:\n{hand_str}")
 
 ##########################################
 # Game class definition
@@ -164,7 +174,7 @@ class Game():
 ##########################################
 # GAME LOOP
 ##########################################
-    def play_game(self, name1, stack1, name2, stack2, hand1 = [], hand2 = [], test_game = False):
+    def play_game(self, name1, stack1, name2, stack2, hand1 = None, hand2 = None, test_game = False):
 
         if test_game:
             self.p1 = Player(name1, stack1, hand1)
@@ -207,29 +217,27 @@ class Game():
 
         p1c, p2c = self.card_choice(p1n, p2n)
         
-        for p in (self.p1, self.p2):
-            if p1c.value == 15:
-                print(f"{p.name} drew a \033[1mJoker\033[0m!\nLet's see {p2n}'s hand")
-                print(f"{p2n}'s hand: {Functions.list_msg(self.p2.hand)}")
+        if p1c.value == 15 or p2c.value == 15:
+            joker = self.joker_played(p1c, p2c)
+            joker.stack.extend([])
+            self.win_msg(joker.name)
+            self.p1.refill_hand()
+            self.p2.refill_hand()
 
-                
-                prompt = f"Upon seeing {p2n}'s hand, do you want to exchange one of your cards or go straight to playing your war card?"
-                exchange = Functions.ask_yes_no(prompt)
-                if exchange == True:
-                   pass
-                elif exchange == False: 
-                    pass
-            elif p1c > p2c:
-                self.p1.stack.extend([p1c, p2c])
-                self.win_msg(p1n)
-                p.refill_hand()
-            elif p2c > p1c:
-                self.p2.stack.extend([p1c, p2c])
-                self.win_msg(p2n)
-                p.refill_hand()
-            elif p1c == p2c:
-                self.war_resolve(p1n, p1c, p2n, p2c)
-                p.refill_hand()
+        elif p1c > p2c:
+            self.p1.stack.extend([p1c, p2c])
+            self.win_msg(p1n)
+            self.p1.refill_hand()
+            self.p2.refill_hand()
+        elif p2c > p1c:
+            self.p2.stack.extend([p1c, p2c])
+            self.win_msg(p2n)
+            self.p1.refill_hand()
+            self.p2.refill_hand()
+        elif p1c == p2c:
+            self.war_resolve(p1n, p1c, p2n, p2c)
+            self.p1.refill_hand()
+            self.p2.refill_hand()
 
         self.win, winner = self.determine_winner()
 
@@ -408,8 +416,8 @@ class Game():
 
                 war_repeat = True
 
-            for p in (self.p1, self.p2):
-                p.refill_hand()   
+            self.p1.refill_hand()
+            self.p2.refill_hand()
 
             for p in (self.p1, self.p2):
                 print(f"""{p.name}'stack: {len(p.stack)}: {p.stack},
@@ -564,6 +572,63 @@ class Game():
     # Joker allows to see the other player's hand 
     # Allows to exchange one of own cards with a chosen card from the other player's hand
     # Can be used whenever
+    def joker_played(self, p1c, p2c):
+        if p1c.value == 15 and p2c.value == 15:
+            joker_both = (self.p1, self.p2)
+            print(f"Both players played a joker, what to do now ?!?!??!")
+            return joker_both
+ 
+        elif p1c.value == 15:
+            joker_player = self.p1
+            other_player = self.p2
+        elif p2c.value == 15:
+            joker_player = self.p2
+            other_player = self.p1
+        
+            print(f"{joker_player.name} drew a \033[1mJoker\033[0m!\nLet's see {other_player.name}'s hand:\n{Functions.list_msg(other_player.hand)}")
+
+        prompt = f"{joker_player}, upon seeing {other_player.name}'s hand, do you want to exchange one of your cards or go straight to playing your war card?"
+        exchange = Functions.ask_yes_no(prompt)
+        if exchange == False:
+            print("Alright, let's see your war card then!")
+        if exchange == True:
+            pass
+            self.joker_exchange(joker_player, other_player)
+        
+        return joker_player
+    
+    def joker_exchange(self, joker_player, other_player):
+        while True:
+            if not self.simulate:
+                self.joker_hand_msg(False, True)
+                prompt = f"Input the number of the other's card you want to take:"
+
+                try:
+                    idx1 = int(input(prompt))
+                    if idx1 not in range(1, len(other_player.hand) + 1):
+                        raise IndexError
+                    take_card = other_player.hand.pop(idx1 - 1)
+                    # joker_player.hand.append(take_card)
+
+                except ValueError:
+                    print("Please enter a number.")
+                    continue
+                except IndexError:
+                    print(f"Choose a number between 1 and {len(other_player.hand)}")
+                    continue
+                break
+
+                self.joker_hand_msg(True, False)
+            elif self.simulate:
+                idx1 = random.choice(range(1, len(other_player.hand)))
+
+        while True:
+            if not self.simulate:
+                .hand_msg(first = False, war = False, burn = False)
+                prompt = f"Input the number of your own card you will give up:"
+
+
+
 
 ##########################################
 # Winner determination
@@ -580,6 +645,9 @@ class Game():
         else:
             return False, None
 
+##########################################
+# Winner determination
+##########################################
 class Test_Game(Game):
     def __init__(self):
         self.test_game = True
