@@ -5,6 +5,8 @@
 import random
 from random import shuffle
 
+# SHOWING KKRISSIEIEIEIEIE :())))))))
+
 ##########################################
 # Card class definition
 ##########################################
